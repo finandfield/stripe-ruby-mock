@@ -12,6 +12,7 @@ module StripeMock
         details_submitted: false,
         charges_enabled: false,
         transfers_enabled: false,
+        object: 'account',
         currencies_supported: [
           "usd"
         ],
