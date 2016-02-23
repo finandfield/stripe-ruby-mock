@@ -13,9 +13,14 @@ module StripeMock
         charges_enabled: false,
         transfers_enabled: false,
         object: 'account',
+        external_accounts: mock_external_accounts(id),
         currencies_supported: [
           "usd"
         ],
+        keys: {
+          secret: nil,
+          publishable: nil
+        }
 
       }.merge(params)
     end
@@ -170,6 +175,28 @@ module StripeMock
         fingerprint: "aBcFinGerPrINt123"
       }.merge(params)
     end
+
+    def self.mock_external_accounts(account, external_accounts=[])
+      data = []
+
+      external_accounts.each do |params|
+        params = mock_external_account(account, params)
+        data << mock_bank_account(params)
+      end
+      {
+        object: 'list',
+        url: "/v1/accounts/#{account}/external_accounts",
+        data: data
+      }
+    end
+
+    def self.mock_external_account(account, params)
+      params = mock_bank_account({
+        routing_number: "1223456789",
+        account: account
+      }).merge(params)
+    end
+
 
     def self.mock_coupon(params={})
       {

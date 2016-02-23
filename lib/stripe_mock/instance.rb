@@ -18,6 +18,7 @@ module StripeMock
       @@handlers.find {|h| method_url =~ h[:route] }
     end
 
+    include StripeMock::RequestHandlers::ExternalAccounts
     include StripeMock::RequestHandlers::Accounts
     include StripeMock::RequestHandlers::Charges
     include StripeMock::RequestHandlers::Cards
@@ -34,6 +35,7 @@ module StripeMock
     include StripeMock::RequestHandlers::Recipients
     include StripeMock::RequestHandlers::Transfers
     include StripeMock::RequestHandlers::Tokens
+
 
 
     attr_reader :accounts, :bank_tokens, :charges, :coupons, :customers, :disputes, :events,

@@ -13,7 +13,6 @@ module StripeMock
       def new_customer(route, method_url, params, headers)
         params[:id] ||= new_id('cus')
         sources = []
-
         if params[:source]
           new_card =
             if params[:source].is_a?(Hash)
@@ -71,7 +70,7 @@ module StripeMock
         end
         cus.merge!(params)
 
-        if params[:source] 
+        if params[:source]
           if params[:source].is_a?(String)
             new_card = get_card_by_token(params.delete(:source))
           elsif params[:source].is_a?(Hash)
