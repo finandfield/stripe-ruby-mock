@@ -19,6 +19,7 @@ module StripeMock
     end
 
     include StripeMock::RequestHandlers::ExternalAccounts
+    include StripeMock::RequestHandlers::Balance
     include StripeMock::RequestHandlers::Accounts
     include StripeMock::RequestHandlers::Charges
     include StripeMock::RequestHandlers::Cards

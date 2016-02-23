@@ -20,9 +20,34 @@ module StripeMock
         keys: {
           secret: nil,
           publishable: nil
-        }
-
+        },
+        balance: mock_balance
       }.merge(params)
+    end
+
+    def self.mock_balance(params={})
+      {
+        :object=>"balance",
+        :available=>[
+          {
+            currency: "usd",
+            amount: 0,
+            source_types: {
+              card: 0
+            }
+          }
+        ],
+        :livemode=>true,
+        :pending=>[
+          {
+            currency: "usd",
+            amount: 0,
+            source_types: {
+              card: 0
+            }
+          }
+        ]
+      }
     end
 
     def self.mock_customer(sources, params)
