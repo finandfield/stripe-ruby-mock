@@ -41,6 +41,7 @@ require 'stripe_mock/request_handlers/helpers/subscription_helpers.rb'
 require 'stripe_mock/request_handlers/helpers/token_helpers.rb'
 require 'stripe_mock/request_handlers/helpers/external_account_helper.rb'
 require 'stripe_mock/request_handlers/helpers/balance_helpers.rb'
+require 'stripe_mock/request_handlers/helpers/transfer_helper.rb'
 
 require 'stripe_mock/request_handlers/validators/param_validators.rb'
 
@@ -73,6 +74,7 @@ module StripeMock
   lib_dir = File.expand_path(File.dirname(__FILE__), '../..')
   @webhook_fixture_path = './spec/fixtures/stripe_webhooks/'
   @webhook_fixture_fallback_path = File.join(lib_dir, 'stripe_mock/webhook_fixtures')
+  $master_balance = 0.0
 
   class << self
     attr_accessor :webhook_fixture_path

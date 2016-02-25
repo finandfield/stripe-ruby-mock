@@ -14,9 +14,17 @@ module StripeMock
           assert_existence :recipient, recipient, recipients[recipient]
         end
 
+        if destination = params[:destination]
+          if is_account?(destination)
+            account = assert_existence :accounts, destination, accounts[destination]
+          end
+        end
+
         _transfers = transfers.each_with_object([]) do |(_, transfer), array|
           if recipient
             array << transfer if transfer[:recipient] == recipient
+          elsif destination
+            array << transfer if transfer[:destination] == destination
           else
             array << transfer
           end
@@ -31,15 +39,40 @@ module StripeMock
 
       def new_transfer(route, method_url, params, headers)
         id = new_id('tr')
-        if params[:bank_account]
-          params[:account] = get_bank_by_token(params.delete(:bank_account))
+        object = find_object_from_transfer_destination(params[:destination])
+
+        if is_bank?(params[:destination])
+          @bank = find_bank_in_account(object, params[:destination])
+        elsif is_account?(params[:destination])
+          @account = object
         end
+
+        # binding.pry
+        # if params[:bank_account]
+        #   params[:account] = get_bank_by_token(params.delete(:bank_account))
+        # end
+        binding.pry
 
         unless params[:amount].is_a?(Integer) || (params[:amount].is_a?(String) && /^\d+$/.match(params[:amount]))
           raise Stripe::InvalidRequestError.new("Invalid integer: #{params[:amount]}", 'amount', 400)
         end
 
-        transfers[id] = Data.mock_transfer(params.merge :id => id)
+        params.merge!(:id => id)
+
+        if is_bank?(params[:destination])
+          transfers[id] = Data.mock_bank_transfer(params)
+          object[:balance][:available].first[:amount] -= transfer[:amount]
+          object[:balance][:available].first[:source_types][transfer[:source_type]] -= transfer[:amount]
+        elsif is_account?(params[:destination])
+          transfer = Data.mock_account_transfer(params)
+          $master_balance -= transfer[:amount]
+          #TODO need to handle pending/available
+          #TODO use correct currencies for balance addition using transfer[:currency]
+          object[:balance][:available].first[:amount] += transfer[:amount]
+          object[:balance][:available].first[:source_types][transfer[:source_type]] += transfer[:amount]
+          #TODO also transfer to account pending/available balances
+          transfers[id] = transfer
+        end
       end
 
       def get_transfer(route, method_url, params, headers)

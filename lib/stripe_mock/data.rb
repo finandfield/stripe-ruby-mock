@@ -498,6 +498,138 @@ module StripeMock
       }.merge(params)
     end
 
+    def self.mock_account_transfer(params={})
+      id = params[:id]
+      {
+        id: id,
+        object: "transfer",
+        amount: 170497,
+        amount_reversed: 0,
+        application_fee: nil,
+        balance_transaction: nil,
+        created: 1456223350,
+        currency: "usd",
+        date: 1456223350,
+        description: "Payout to Stripe Account",
+        destination: 'test_acct_1',
+        failure_code: nil,
+        failure_message: nil,
+        livemode: false,
+        metadata: {},
+        recipient: nil,
+        reversals: {
+          object: "list",
+          data: [],
+          has_more: false,
+          total_count: 0,
+          url: "/v1/transfers/#{id}/reversals"
+        },
+        reversed: false,
+        source_transaction: nil,
+        source_type: "card",
+        statement_descriptor: "Monthly Booking Revenue",
+        status: "paid",
+        type: "stripe_account"
+      }.merge(params)
+    end
+
+    def self.mock_bank_transfer(account, params={})
+      {
+        id: "tr_17hdPm4CGk8CbGVeEaQtnUkz",
+        object: "transfer",
+        amount: 170497,
+        amount_reversed: 0,
+        application_fee: nil,
+        balance_transaction: nil,
+        bank_account: {
+          id: "ba_10478q4CGk8CbGVeyD7KQS4Y",
+          object: "bank_account",
+          account_holder_name: nil,
+          account_holder_type: nil,
+          bank_name: "TEST BANKS",
+          country: "US",
+          currency: "usd",
+          fingerprint: nil,
+          last4: "0000",
+          routing_number: "000000000",
+          status: "new"
+        },
+        created: 1456223350,
+        currency: "usd",
+        date: 1456223350,
+        description: "Payout to Bank Account",
+        destination: "ba_10478q4CGk8CbGVeyD7KQS4Y",
+        failure_code: nil,
+        failure_message: nil,
+        livemode: false,
+        metadata: {},
+        recipient: nil,
+        reversals: {
+          object: "list",
+          data: [],
+          has_more: false,
+          total_count: 0,
+          url: "/v1/transfers/#{id}/reversals"
+        },
+        reversed: false,
+        source_transaction: nil,
+        source_type: "card",
+        statement_descriptor: "Monthly Booking Revenue",
+        status: "paid",
+        type: "bank_account"
+      }
+    end
+
+   #  {
+   #   "id": "tr_17hdPm4CGk8CbGVeEaQtnUkz",
+   #   "object": "transfer",
+   #   "amount": 170497,
+   #   "amount_reversed": 0,
+   #   "application_fee": null,
+   #   "balance_transaction": "txn_17g2Ro4CGk8CbGVeyNuEgy2T",
+   #   "bank_account": {
+   #     "id": "ba_10478q4CGk8CbGVeyD7KQS4Y",
+   #     "object": "bank_account",
+   #     "account_holder_name": null,
+   #     "account_holder_type": null,
+   #     "bank_name": "PARKSIDE FINANCIAL BANK AND TRUST",
+   #     "country": "US",
+   #     "currency": "usd",
+   #     "fingerprint": null,
+   #     "last4": "6865",
+   #     "routing_number": "081019405",
+   #     "status": "new"
+   #   },
+   #   "created": 1456223350,
+   #   "currency": "usd",
+   #   "date": 1456223350,
+   #   "description": "Payout to Bank Account",
+   #   "destination": "ba_10478q4CGk8CbGVeyD7KQS4Y",
+   #   "failure_code": null,
+   #   "failure_message": null,
+   #   "livemode": false,
+   #   "metadata": {
+   #     "billing_account_id": "856705715",
+   #     "organization_id": "980190962"
+   #   },
+   #   "recipient": null,
+   #   "reversals": {
+   #     "object": "list",
+   #     "data": [
+   #
+   #     ],
+   #     "has_more": false,
+   #     "total_count": 0,
+   #     "url": "/v1/transfers/tr_17hdPm4CGk8CbGVeEaQtnUkz/reversals"
+   #   },
+   #   "reversed": false,
+   #   "source_transaction": null,
+   #   "source_type": "card",
+   #   "statement_descriptor": "Monthly Booking Revenue",
+   #   "status": "paid",
+   #   "type": "bank_account"
+   # }
+
     def self.mock_transfer(params={})
       id = params[:id] || 'tr_test_transfer'
       {

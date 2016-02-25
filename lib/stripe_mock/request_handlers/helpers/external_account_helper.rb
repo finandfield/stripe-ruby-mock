@@ -6,6 +6,22 @@ module StripeMock
         account[:external_accounts][:data].find{|acct| acct[:id] == acct_id }
       end
 
+      def find_external_account_for_account(account, bank_id)
+        account[:external_accounts][:data].find{|ex_acct| ex_acct == bank_id }
+      end
+
+      def find_account_with_bank(bank_id)
+        accounts.find{|acct| acct[:external_accounts][:data].find{|ba| ba[:id] == bank_id } }
+      end
+
+      def find_bank_in_account(account, bank_id)
+        accounts[account][:external_accounts][:data].find{|ba| ba[:id] == bank_id }
+      end
+
+      def find_bank_account_in_accounts(bank_id)
+
+      end
+
       def add_external_account_to_account(id, params, replace_current=false)
         account = assert_existence :account, id, accounts[id]
         external_accounts = account[:external_accounts]
