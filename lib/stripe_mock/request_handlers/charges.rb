@@ -32,7 +32,10 @@ module StripeMock
 
         charge = Data.mock_charge(params.merge :id => id, :balance_transaction => new_balance_transaction('txn'))
 
-        $master_balance += charge[:amount]
+        #TODO handle failures
+        $master_account[:balance][:available].first[:amount] += charge[:amount]
+        $master_account[:balance][:available].first[:source_types][:card] += charge[:amount]
+
         charges[id] = charge
       end
 

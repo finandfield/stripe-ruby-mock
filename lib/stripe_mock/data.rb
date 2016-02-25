@@ -569,7 +569,7 @@ module StripeMock
           data: [],
           has_more: false,
           total_count: 0,
-          url: "/v1/transfers/#{id}/reversals"
+          url: "/v1/transfers/#{account}/reversals"
         },
         reversed: false,
         source_transaction: nil,
@@ -577,7 +577,7 @@ module StripeMock
         statement_descriptor: "Monthly Booking Revenue",
         status: "paid",
         type: "bank_account"
-      }
+      }.merge(params)
     end
 
    #  {

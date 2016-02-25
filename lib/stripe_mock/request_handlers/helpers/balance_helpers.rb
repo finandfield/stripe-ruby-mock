@@ -12,10 +12,15 @@ module StripeMock
         Stripe.api_key = key
       end
 
+
       def get_account_by_secret_key
-        account = accounts.select do |id, account|
-          account[:keys] && account[:keys][:secret] == Stripe.api_key
-        end.values.first
+        if is_master_account?
+          account = $master_account
+        else
+          account = accounts.select do |id, account|
+            account[:keys] && account[:keys][:secret] == Stripe.api_key
+          end.values.first
+        end
         account
       end
     end

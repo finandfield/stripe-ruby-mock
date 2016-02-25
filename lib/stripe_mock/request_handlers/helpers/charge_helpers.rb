@@ -11,6 +11,11 @@ module StripeMock
         charge[:refunded] = true
       end
 
+      def price_without_stripe_fees(price)
+        fee = (price * 0.029) + 0.3
+        fee.to_i
+      end
+
     end
   end
 end

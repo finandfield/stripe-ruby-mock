@@ -69,6 +69,15 @@ module StripeMock
 
       # This is basically a cache for ParamValidators
       @base_strategy = TestStrategies::Base.new
+
+      $master_account = {
+        id: 'master_acct',
+        keys: {
+          secret: Stripe.api_key,
+          publishable: new_id('pk')
+        },
+        balance: Data.mock_balance
+      }
     end
 
     def mock_request(method, url, api_key, params={}, headers={}, api_base_url=nil)

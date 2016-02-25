@@ -11,11 +11,23 @@ module StripeMock
       end
 
       def find_account_with_bank(bank_id)
-        accounts.find{|acct| acct[:external_accounts][:data].find{|ba| ba[:id] == bank_id } }
+        found_account = nil
+        accounts.each do |id, account|
+          if account[:external_accounts][:data].find{|ba| ba[:id] == bank_id }
+            found_account = account
+            break
+          end
+        end
+        found_account
+        # accounts.values.find{|acct| acct[:external_accounts][:data].find{|ba| ba[:id] == bank_id } }
       end
 
       def find_bank_in_account(account, bank_id)
-        accounts[account][:external_accounts][:data].find{|ba| ba[:id] == bank_id }
+        begin
+          account[:external_accounts][:data].find{|ba| ba[:id] == bank_id }
+        rescue => e
+          binding.pry
+        end
       end
 
       def find_bank_account_in_accounts(bank_id)
