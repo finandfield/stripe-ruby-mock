@@ -36,12 +36,13 @@ module StripeMock
     include StripeMock::RequestHandlers::Recipients
     include StripeMock::RequestHandlers::Transfers
     include StripeMock::RequestHandlers::Tokens
+    include StripeMock::RequestHandlers::BalanceTransactions
 
 
 
     attr_reader :accounts, :bank_tokens, :charges, :coupons, :customers, :disputes, :events,
                 :invoices, :invoice_items, :orders, :plans, :recipients, :transfers,
-                :subscriptions
+                :subscriptions, :balance_transactions
 
     attr_accessor :error_queue, :debug
 
@@ -61,6 +62,7 @@ module StripeMock
       @recipients = {}
       @transfers = {}
       @subscriptions = {}
+      @balance_transactions = {}
 
       @debug = false
       @error_queue = ErrorQueue.new
@@ -80,9 +82,12 @@ module StripeMock
       }
     end
 
+    def set_api_key(key)
+      Stripe.api_key = key
+    end
+
     def mock_request(method, url, api_key, params={}, headers={}, api_base_url=nil)
       return {} if method == :xtest
-
       api_key ||= Stripe.api_key
 
       # Ensure params hash has symbols as keys

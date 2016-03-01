@@ -5,7 +5,9 @@ module StripeMock
         if is_account?(params[:destination])
           accounts[params[:destination]]
         elsif is_bank?(params[:destination])
-          if params[:destination] == 'bank_account' && params[:bank_account].present?
+          if params[:recipient] && params[:recipient] == 'self' && params[:destination] == 'bank_account'
+            get_account_by_secret_key
+          elsif params[:destination] == 'bank_account' && params[:bank_account].present?
             find_account_with_bank(params[:bank_account])
           else
             find_account_with_bank(params[:bank_account])
@@ -18,7 +20,7 @@ module StripeMock
       end
 
       def is_bank?(id)
-        id && (id.include?('ba_') || id == 'bank_account')
+        !!(id && (id.include?('ba_') || id == 'bank_account'))
       end
 
       #TODO move to helper

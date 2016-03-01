@@ -37,6 +37,7 @@ module StripeMock
         Data.mock_list_object(_transfers, params)
       end
 
+      # TODO need to create a balance transaction and account for stripe/application fees
       def new_transfer(route, method_url, params, headers)
         id = new_id('tr')
         begin

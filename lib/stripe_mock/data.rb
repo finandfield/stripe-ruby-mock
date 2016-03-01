@@ -142,6 +142,61 @@ module StripeMock
       }.merge(params)
     end
 
+    #TODO need to find a way to account for stripe fees
+    def self.mock_balance_transaction_from_charge(charge={})
+      params = {
+        id: charge[:balance_transaction],
+        fee: charge[:application_fee],
+        fee_details: [
+          {
+            amount: 0,
+            application: charge[:application_fee],
+            type: 'stripe_fee'
+          }
+        ],
+        net: charge[:amount],
+        source: charge[:id]
+      }.merge(charge.slice(:amount, :currency, :description))
+
+      mock_balance_transaction(params)
+    end
+
+    def self.mock_balance_transaction(params={})
+      {
+        id: "txn_2dyYXXP90MN26R",
+        object: 'balance_transaction',
+        amount: 10000,
+        available_on: 1456439421,
+        created: 1456439421,
+        currency: "usd",
+        description: "Pre charge",
+        fee: 1500,
+        fee_details: [
+          {
+            amount: 1500,
+            application: nil,
+            currency: "usd",
+            description: "Stripe processing fees",
+            type: "stripe_fee"
+          }
+        ],
+        net: 9000,
+        source: "ch_17iXcnKRiEG7LLwGh0YSXj57",
+        sourced_transfers: {
+          object: "list",
+          data: [
+
+          ],
+          has_more: false,
+          total_count: 0,
+          url: "/v1/transfers?source_transaction=ch_17iXcnKRiEG7LLwGh0YSXj57"
+        },
+        status: "available",
+        type: "charge"
+      }.merge(params)
+
+    end
+
     def self.mock_refund(params={})
       {
         id: "re_4fWhgUh5si7InF",
