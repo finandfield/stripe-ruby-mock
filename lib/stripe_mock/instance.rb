@@ -63,6 +63,7 @@ module StripeMock
       @transfers = {}
       @subscriptions = {}
       @balance_transactions = {}
+      @bank_balances = {}
 
       @debug = false
       @error_queue = ErrorQueue.new

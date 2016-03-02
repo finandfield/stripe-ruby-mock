@@ -40,13 +40,13 @@ module StripeMock
       # TODO need to create a balance transaction and account for stripe/application fees
       def new_transfer(route, method_url, params, headers)
         id = new_id('tr')
-        begin
+        # begin
           object = find_object_from_transfer_params(params)
-        rescue => e
-          binding.pry
-        end
+        # rescue => e
+        #   binding.pry
+        # end
 
-        begin
+        # begin
           if is_bank?(params[:destination])
             @bank = find_bank_in_account(object, params[:destination])
           elsif is_bank?(params[:bank_account])
@@ -54,9 +54,9 @@ module StripeMock
           elsif is_account?(params[:destination])
             @account = object
           end
-        rescue => e
-          binding.pry
-        end
+        # rescue => e
+        #   binding.pry
+        # end
 
         # binding.pry
         # if params[:bank_account]
@@ -73,25 +73,28 @@ module StripeMock
 
         params.merge!(:id => id)
 
+
         if is_bank?(params[:destination])
-          begin
+          # begin
             transfer = Data.mock_bank_transfer(object[:id], params)
 
             transfer.merge!({bank_account: @bank}) if @bank
 
             object[:balance][:available].first[:amount] -= transfer[:amount]
             object[:balance][:available].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
+            @bank_balances[object[:id]] ||= 0
+            @bank_balances[object[:id]] += transfer[:amount]
 
             transfers[id] = transfer
-          rescue => e
-            binding.pry
-          end
+          # rescue => e
+          #   binding.pry
+          # end
         elsif is_account?(params[:destination])
           transfer = Data.mock_account_transfer(params)
 
           # TODO handle negative master account balances(throw same exception as stripe)
           $master_account[:balance][:available].first[:amount] -= transfer[:amount]
-          $master_account[:balance][:available].first[:source_types][transfer[:source_type].to_sym] += transfer[:amount]
+          $master_account[:balance][:available].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
 
           #TODO need to handle pending/available
           #TODO use correct currencies for balance addition using transfer[:currency]
@@ -101,7 +104,6 @@ module StripeMock
           #TODO also transfer to account pending/available balances
           transfers[id] = transfer
         end
-        # binding.pry
         transfer
       end
 

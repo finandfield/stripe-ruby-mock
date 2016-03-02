@@ -14,7 +14,6 @@ module StripeMock
 
       def new_charge(route, method_url, params, headers)
         id = new_id('ch')
-
         if params[:source] && params[:source].is_a?(String)
           # if a customer is provided, the card parameter is assumed to be the actual
           # card id, not a token. in this case we'll find the card in the customer
@@ -28,25 +27,47 @@ module StripeMock
           raise Stripe::InvalidRequestError.new("Invalid token id: #{params[:card]}", 'card', 400)
         end
 
-
         # binding.pry
         customer = customers[params[:customer]]
 
+        unless customer.present?
+          raise Stripe::InvalidRequestError.new("Could not find customer with id: #{params[:customer].inspect}", 'customer', 400)
+        end
+
+
+
+        if params[:source].nil? && customer && params[:destination] && params[:destination].include?('acct') && customer[:default_source]
+          # This is most often called when we do an "instant charge"
+          card = customer[:sources][:data].find{|card| card[:id] == customer[:default_source]}
+        elsif customer[:sources] && customer[:sources][:data].any?
+          card = customer[:sources][:data].find{|card| card[:id] == params[:card]}
+        end
+
+        unless card
+          raise Stripe::InvalidRequestError.new("#{params[:card]} does not belong to #{params[:customer]}", 'amount', 400)
+        end
 
         ensure_required_params(params)
         charge = Data.mock_charge(params.merge :id => id, :balance_transaction => new_balance_transaction('txn'))
-        if customer && customer[:sources] && customer[:sources][:data].any? && customer[:sources][:data].first[:number] == CARDS.instant_charge && params[:destination].include?('acct')
+        # binding.pry
+        # if customer && customer[:sources] && customer[:sources][:data].any? && customer[:sources][:data].first[:number] == CARDS.instant_charge && params[:destination] && params[:destination].include?('acct')
+        if customer && card && card[:last4] == CARDS.instant_charge.last(4) && params[:destination] && params[:destination].include?('acct')
+          # In these cases, we are accounting for cards with the number `4000 0000 0000 0077`. When this card is used, funds are
+          #   deposited directly into the destination account
           account = accounts[params[:destination]]
           account[:balance][:available].first[:amount] += charge[:amount]
           account[:balance][:available].first[:source_types][:card] += charge[:amount]
         else
           #TODO handle failure cards & instant charge etc
+          # This deals with a normal charge, where it is placed in the "master" account(the account all Connected Accounts report to)
           $master_account[:balance][:available].first[:amount] += charge[:amount]
           $master_account[:balance][:available].first[:source_types][:card] += charge[:amount]
         end
+        # binding.pry
 
         balance_transaction = Data.mock_balance_transaction_from_charge(charge)
         balance_transactions[balance_transaction[:id]] = balance_transaction
+
         # binding.pry
         charges[id] = charge
       end
