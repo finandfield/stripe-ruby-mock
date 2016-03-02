@@ -28,17 +28,26 @@ module StripeMock
           raise Stripe::InvalidRequestError.new("Invalid token id: #{params[:card]}", 'card', 400)
         end
 
+
+        # binding.pry
+        customer = customers[params[:customer]]
+
+
         ensure_required_params(params)
-
         charge = Data.mock_charge(params.merge :id => id, :balance_transaction => new_balance_transaction('txn'))
-
-        #TODO handle failure cards
-        $master_account[:balance][:available].first[:amount] += charge[:amount]
-        $master_account[:balance][:available].first[:source_types][:card] += charge[:amount]
+        if customer && customer[:sources] && customer[:sources][:data].any? && customer[:sources][:data].first[:number] == CARDS.instant_charge && params[:destination].include?('acct')
+          account = accounts[params[:destination]]
+          account[:balance][:available].first[:amount] += charge[:amount]
+          account[:balance][:available].first[:source_types][:card] += charge[:amount]
+        else
+          #TODO handle failure cards & instant charge etc
+          $master_account[:balance][:available].first[:amount] += charge[:amount]
+          $master_account[:balance][:available].first[:source_types][:card] += charge[:amount]
+        end
 
         balance_transaction = Data.mock_balance_transaction_from_charge(charge)
         balance_transactions[balance_transaction[:id]] = balance_transaction
-
+        # binding.pry
         charges[id] = charge
       end
 

@@ -75,8 +75,16 @@ module StripeMock
   lib_dir = File.expand_path(File.dirname(__FILE__), '../..')
   @webhook_fixture_path = './spec/fixtures/stripe_webhooks/'
   @webhook_fixture_fallback_path = File.join(lib_dir, 'stripe_mock/webhook_fixtures')
+  CARDS = Hashie::Mash.new({
+    :success_visa => '4242424242424242',
+    :visa_debit => '4000056655665556',
+    :mastercard => '5555555555554444',
+    :amex => '378282246310005',
+    :instant_charge => '4000000000000077'
+  })
 
   class << self
     attr_accessor :webhook_fixture_path
+
   end
 end
