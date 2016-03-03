@@ -8,7 +8,7 @@ module StripeMock
         klass.add_handler 'get /v1/charges/(.*)',           :get_charge
         klass.add_handler 'post /v1/charges/(.*)/capture',  :capture_charge
         klass.add_handler 'post /v1/charges/(.*)/refund',   :refund_charge
-        klass.add_handler 'post /v1/charges/(.*)/refunds',  :create_refund
+        klass.add_handler 'post /v1/refunds',  :create_refund
         klass.add_handler 'post /v1/charges/(.*)',          :update_charge
       end
 
@@ -27,7 +27,7 @@ module StripeMock
           raise Stripe::InvalidRequestError.new("Invalid token id: #{params[:card]}", 'card', 400)
         end
 
-        # binding.pry
+
         customer = customers[params[:customer]]
 
         unless customer.present?
@@ -63,8 +63,10 @@ module StripeMock
           $master_account[:balance][:available].first[:amount] += charge[:amount]
           $master_account[:balance][:available].first[:source_types][:card] += charge[:amount]
         end
-        # binding.pry
 
+        if card
+          charge[:source] = card
+        end
         balance_transaction = Data.mock_balance_transaction_from_charge(charge)
         balance_transactions[balance_transaction[:id]] = balance_transaction
 
@@ -101,7 +103,11 @@ module StripeMock
 
       def get_charge(route, method_url, params, headers)
         route =~ method_url
-        assert_existence :charge, $1, charges[$1]
+        if $1
+          assert_existence :charge, $1, charges[$1]
+        elsif params[:charge]
+          assert_existence :charge, params[:charge], charges[params[:charge]]
+        end
       end
 
       def capture_charge(route, method_url, params, headers)
@@ -138,9 +144,11 @@ module StripeMock
         refund = Data.mock_refund params.merge(
           :balance_transaction => new_balance_transaction('txn'),
           :id => new_id('re'),
-          :charge => charge[:id]
+          :charge => charge[:id],
+          :card => charge[:source]
         )
         add_refund_to_charge(refund, charge)
+
         refund
       end
 

@@ -11,8 +11,6 @@ module StripeMock
       end
 
       def new_invoice_item(route, method_url, params, headers)
-        # binding.pry
-
         params[:id] ||= new_id('ii')
 
         customer = customers[params[:customer]]
