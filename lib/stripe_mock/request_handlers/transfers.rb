@@ -40,29 +40,17 @@ module StripeMock
       # TODO need to create a balance transaction and account for stripe/application fees
       def new_transfer(route, method_url, params, headers)
         id = new_id('tr')
-        # begin
-          object = find_object_from_transfer_params(params)
-        # rescue => e
-        #   binding.pry
-        # end
 
-        # begin
-          if is_bank?(params[:destination])
-            @bank = find_bank_in_account(object, params[:destination])
-          elsif is_bank?(params[:bank_account])
-            @bank = find_bank_in_account(object, params[:destination])
-          elsif is_account?(params[:destination])
-            @account = object
-          end
-        # rescue => e
-        #   binding.pry
-        # end
+        object = find_object_from_transfer_params(params)
 
-        # binding.pry
-        # if params[:bank_account]
-        #   params[:account] = get_bank_by_token(params.delete(:bank_account))
-        # end
-        # binding.pry
+        if is_bank?(params[:destination])
+          @bank = find_bank_in_account(object, params[:destination])
+        elsif is_bank?(params[:bank_account])
+          @bank = find_bank_in_account(object, params[:destination])
+        elsif is_account?(params[:destination])
+          @account = object
+        end
+
 
         #TODO handle application fees/stripe processing fees
         params[:amount] = params[:amount] - params[:application_fee] if params[:application_fee]
@@ -75,20 +63,16 @@ module StripeMock
 
 
         if is_bank?(params[:destination])
-          # begin
-            transfer = Data.mock_bank_transfer(object[:id], params)
+          transfer = Data.mock_bank_transfer(object[:id], params)
 
-            transfer.merge!({bank_account: @bank}) if @bank
+          transfer.merge!({bank_account: @bank}) if @bank
 
-            object[:balance][:available].first[:amount] -= transfer[:amount]
-            object[:balance][:available].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
-            @bank_balances[object[:id]] ||= 0
-            @bank_balances[object[:id]] += transfer[:amount]
+          object[:balance][:available].first[:amount] -= transfer[:amount]
+          object[:balance][:available].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
+          @bank_balances[object[:id]] ||= 0
+          @bank_balances[object[:id]] += transfer[:amount]
 
-            transfers[id] = transfer
-          # rescue => e
-          #   binding.pry
-          # end
+          transfers[id] = transfer
         elsif is_account?(params[:destination])
           transfer = Data.mock_account_transfer(params)
 

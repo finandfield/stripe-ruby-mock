@@ -13,6 +13,7 @@ module StripeMock
 
       def retrieve_balance_transaction(route, method_url, params, headers)
         route =~ method_url
+
         balance_transactions[$1]
       end
 

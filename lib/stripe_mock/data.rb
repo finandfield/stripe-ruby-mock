@@ -155,7 +155,8 @@ module StripeMock
           }
         ],
         net: charge[:amount],
-        source: charge[:id]
+        source: charge[:id],
+        type: charge[:object]
       }.merge(charge.slice(:amount, :currency, :description))
 
       mock_balance_transaction(params)

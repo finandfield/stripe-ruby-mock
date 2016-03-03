@@ -3,12 +3,13 @@ module StripeMock
     module Charges
 
       def Charges.included(klass)
+        klass.add_handler 'get /v1/charges/(.*)/refunds/(.*)',          :get_refund
         klass.add_handler 'post /v1/charges',               :new_charge
         klass.add_handler 'get /v1/charges',                :get_charges
         klass.add_handler 'get /v1/charges/(.*)',           :get_charge
         klass.add_handler 'post /v1/charges/(.*)/capture',  :capture_charge
         klass.add_handler 'post /v1/charges/(.*)/refund',   :refund_charge
-        klass.add_handler 'post /v1/refunds',  :create_refund
+        klass.add_handler 'post /v1/refunds',               :create_refund
         klass.add_handler 'post /v1/charges/(.*)',          :update_charge
       end
 
@@ -49,7 +50,7 @@ module StripeMock
 
         ensure_required_params(params)
         charge = Data.mock_charge(params.merge :id => id, :balance_transaction => new_balance_transaction('txn'))
-        # binding.pry
+
         # if customer && customer[:sources] && customer[:sources][:data].any? && customer[:sources][:data].first[:number] == CARDS.instant_charge && params[:destination] && params[:destination].include?('acct')
         if customer && card && card[:last4] == CARDS.instant_charge.last(4) && params[:destination] && params[:destination].include?('acct')
           # In these cases, we are accounting for cards with the number `4000 0000 0000 0077`. When this card is used, funds are
@@ -70,7 +71,7 @@ module StripeMock
         balance_transaction = Data.mock_balance_transaction_from_charge(charge)
         balance_transactions[balance_transaction[:id]] = balance_transaction
 
-        # binding.pry
+
         charges[id] = charge
       end
 
@@ -103,11 +104,20 @@ module StripeMock
 
       def get_charge(route, method_url, params, headers)
         route =~ method_url
+
         if $1
           assert_existence :charge, $1, charges[$1]
         elsif params[:charge]
           assert_existence :charge, params[:charge], charges[params[:charge]]
         end
+      end
+
+      def get_refund(route, method_url, params, headers)
+        route =~ method_url
+        charge = charges[$1]
+        refund = charge[:refunds][:data].find{|r| r[:id] == $2}
+        refund
+
       end
 
       def capture_charge(route, method_url, params, headers)
@@ -145,9 +155,16 @@ module StripeMock
           :balance_transaction => new_balance_transaction('txn'),
           :id => new_id('re'),
           :charge => charge[:id],
-          :card => charge[:source]
+          :card => charge[:source],
+          :amount => charge[:amount]
         )
+
         add_refund_to_charge(refund, charge)
+
+        transaction_params = refund.clone
+        transaction_params[:amount] = -transaction_params[:amount]
+        balance_transaction = Data.mock_balance_transaction_from_charge(transaction_params)
+        balance_transactions[balance_transaction[:id]] = balance_transaction
 
         refund
       end
