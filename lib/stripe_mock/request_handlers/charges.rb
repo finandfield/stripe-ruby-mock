@@ -117,7 +117,6 @@ module StripeMock
         charge = charges[$1]
         refund = charge[:refunds][:data].find{|r| r[:id] == $2}
         refund
-
       end
 
       def capture_charge(route, method_url, params, headers)

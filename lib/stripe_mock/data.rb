@@ -11,7 +11,7 @@ module StripeMock
         timezone: "US/Pacific",
         details_submitted: false,
         charges_enabled: false,
-        transfers_enabled: false,
+        transfers_enabled: true,
         object: 'account',
         external_accounts: mock_external_accounts(id),
         currencies_supported: [
@@ -21,7 +21,35 @@ module StripeMock
           secret: nil,
           publishable: nil
         },
-        balance: mock_balance
+        legal_entity: {
+          verification: {
+            details: nil,
+            details_code: nil,
+            document: nil,
+            status: 'unverified'
+          }
+        },
+        balance: mock_balance,
+        tos_acceptance: {
+          date: nil,
+          ip: nil,
+          user_agent: nil
+        },
+        verification: {
+          disabled_reason: "fields_needed",
+          due_by: nil,
+          fields_needed: [
+            "legal_entity.dob.day",
+            "legal_entity.dob.month",
+            "legal_entity.dob.year",
+            "legal_entity.first_name",
+            "legal_entity.last_name",
+            "legal_entity.type",
+            "tos_acceptance.date",
+            "tos_acceptance.ip",
+            "bank_account"
+          ]
+        }
       }.merge(params)
     end
 

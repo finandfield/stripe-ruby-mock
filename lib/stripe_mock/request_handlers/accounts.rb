@@ -30,6 +30,13 @@ module StripeMock
       def update_account(route, method_url, params, headers)
         route =~ method_url
         assert_existence :account, $1, accounts[$1]
+
+        account = accounts[$1]
+        if params[:legal_entity] && params[:legal_entity][:verification] && params[:legal_entity][:verification].none?
+          params[:legal_entity][:verification] = account[:legal_entity][:verification]
+        end
+
+        # binding.pry
         accounts[$1].merge!(params)
       end
 
