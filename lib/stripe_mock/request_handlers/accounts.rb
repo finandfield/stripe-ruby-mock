@@ -36,7 +36,6 @@ module StripeMock
           params[:legal_entity][:verification] = account[:legal_entity][:verification]
         end
 
-        # binding.pry
         accounts[$1].merge!(params)
       end
 
