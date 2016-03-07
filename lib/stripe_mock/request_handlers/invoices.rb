@@ -74,10 +74,15 @@ module StripeMock
         raise Stripe::InvalidRequestError.new("No upcoming invoices for customer: #{customer[:id]}", nil, 404) if customer[:subscriptions][:data].length == 0
 
         most_recent = customer[:subscriptions][:data].min_by { |sub| sub[:current_period_end] }
+
+
         invoice_item = get_mock_subscription_line_item(most_recent)
 
+        # binding.pry
         id = new_id('in')
-        invoices[id] = Data.mock_invoice([invoice_item],
+
+        lines = [invoice_item] + customer[:upcoming]
+        invoices[id] = Data.mock_invoice(lines,
           id: id,
           customer: customer[:id],
           subscription: most_recent[:id],

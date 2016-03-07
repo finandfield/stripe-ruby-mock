@@ -80,6 +80,9 @@ module StripeMock
         plan_name ||= subscription[:plan][:id]
         plan = plans[plan_name]
 
+        new_plan = plan.clone
+        old_plan = subscription[:plan].clone
+
         if params[:coupon]
           coupon_id = params[:coupon]
           raise Stripe::InvalidRequestError.new("No such coupon: #{coupon_id}", 'coupon', 400) unless coupons[coupon_id]
@@ -102,9 +105,35 @@ module StripeMock
 
         subscription.merge!(custom_subscription_params(plan, customer, params))
 
-        # delete the old subscription, replace with the new subscription
-        customer[:subscriptions][:data].reject! { |sub| sub[:id] == subscription[:id] }
+
+        old_subscription = customer[:subscriptions][:data].find { |sub| sub[:id] == subscription[:id] }.clone
+
+        # old_plan = old_subscription[:plan].clone
+        # new_plan = subscription[:plan].clone
+
+        customer[:subscriptions][:data].delete(old_subscription)
+        # old_subscription = customer[:subscriptions][:data].reject! { |sub| sub[:id] == subscription[:id] }
         customer[:subscriptions][:data] << subscription
+
+
+
+        if subscription && old_subscription && old_subscription[:current_period_start] == subscription[:current_period_start]
+          if params[:prorate]
+            customer[:upcoming] ||= []
+
+            # Moving to a new plan
+            if (new_plan[:amount] > old_plan[:amount]) && old_plan[:amount] != 0
+
+              line_item = Data.mock_line_item(new_plan)
+              old_line_item = Data.mock_line_item(old_plan)
+
+              old_line_item[:amount] = -old_line_item[:amount]
+
+
+              customer[:upcoming] += [line_item, old_line_item]
+            end
+          end
+        end
 
         subscription
       end
