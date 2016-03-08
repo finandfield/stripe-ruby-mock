@@ -92,6 +92,7 @@ module StripeMock
         discount: nil,
         account_balance: 0,
         currency: nil,
+        upcoming: [],
         sources: {
           object: "list",
           total_count: sources.size,
@@ -392,6 +393,13 @@ module StripeMock
         discount: nil,
         subscription: nil
       }.merge(params)
+    end
+
+    def self.mock_subscription_line_item_from_plan(params = {})
+      mock = mock_line_item(params)
+      mock[:plan] = params
+      mock[:type] = 'subscription'
+      mock
     end
 
     def self.mock_line_item(params = {})

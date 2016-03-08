@@ -78,10 +78,10 @@ module StripeMock
 
         invoice_item = get_mock_subscription_line_item(most_recent)
 
-        # binding.pry
         id = new_id('in')
 
-        lines = [invoice_item] + customer[:upcoming]
+        # lines = [invoice_item] + customer[:upcoming]
+        lines = customer[:upcoming]
         invoices[id] = Data.mock_invoice(lines,
           id: id,
           customer: customer[:id],

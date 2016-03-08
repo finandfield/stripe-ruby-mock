@@ -115,22 +115,92 @@ module StripeMock
         # old_subscription = customer[:subscriptions][:data].reject! { |sub| sub[:id] == subscription[:id] }
         customer[:subscriptions][:data] << subscription
 
-
+        $counter += 1
 
         if subscription && old_subscription && old_subscription[:current_period_start] == subscription[:current_period_start]
           if params[:prorate]
+
             customer[:upcoming] ||= []
+            if old_plan[:amount] == 0
 
-            # Moving to a new plan
-            if (new_plan[:amount] > old_plan[:amount]) && old_plan[:amount] != 0
+              line = Data.mock_subscription_line_item_from_plan(new_plan)
+              # time = Time.now.to_i
 
-              line_item = Data.mock_line_item(new_plan)
-              old_line_item = Data.mock_line_item(old_plan)
+              # if new_plan[:interval] == 'year'
+              #
+              #   line[:period] = {:start => subscription[:current_period_start], :end => time + 1.year}
+              # else
+              #   line[:period] = {:start => }
+              # end
+              customer[:upcoming] << line
+            elsif old_plan[:interval] == new_plan[:interval]
+              # Moving to a new plan
+              if new_plan[:amount] > old_plan[:amount]
 
-              old_line_item[:amount] = -old_line_item[:amount]
+                line_item = Data.mock_subscription_line_item_from_plan(new_plan)
+
+                old_line_item = Data.mock_subscription_line_item_from_plan(old_plan)
+
+                if customer[:upcoming].include?(old_line_item)
+                  customer[:upcoming].delete(old_line_item)
+                end
+
+                old_line_item[:amount] = -old_line_item[:amount]
+
+                old_line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
+
+                line_two = line_item.clone
+                line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
 
 
-              customer[:upcoming] += [line_item, old_line_item]
+                line_two[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription), :count => $counter}
+
+                customer[:upcoming] += [line_item, old_line_item, line_two]
+              elsif new_plan[:amount] < old_plan[:amount]
+                # TODO should probably handle annual vs monthly, if the new plan is less than half the old plan, then it won't be a full
+                #   credit the next period
+                # EX: new_plan(50)  old_plan(60) -> results in -> [-50, 10] for next upcoming invoice[now, next_period]
+                # They get a lot of credit for time unused
+                line_item = Data.mock_subscription_line_item_from_plan(new_plan)
+                # line_item[:type] = 'subscription'
+
+                prorate_item = Data.mock_subscription_line_item_from_plan(old_plan)
+
+
+                # Problem here
+                line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
+                line_item[:description] = "Remaining time on #{plan[:name]} after 08 Mar 2016"
+
+                future_line_item = line_item.clone
+                # future_line_item[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription), :count => ($counter += 1)}
+                future_line_item[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription), :count => $counter}
+
+
+                prorate_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
+
+
+
+                # See if there was a previously prorated charge and remove it, since the date will no longer be correct
+                if existing = customer[:upcoming].find{|u| u[:amount] == prorate_item[:amount] && u[:period][:start] > prorate_item[:period][:start]}
+                  #TODO also check that plans match AND dates are correct
+                  customer[:upcoming].delete(existing)
+                end
+
+                prorate_item[:amount] = -prorate_item[:amount]
+                # TODO include actual date
+                prorate_item[:description] = "Unused time on #{plan[:name]} after <08 Mar 2016>"
+                customer[:upcoming] += [line_item, future_line_item, prorate_item]
+              else
+                old_plan[:amount]
+              end
+            else
+              # Interval type changed
+              # TODO should mock the charge here
+              # TODO handle year -> month & month -> year separately
+              line_item = Data.mock_subscription_line_item_from_plan(new_plan)
+              # For now I'm just going to reset this, since stripe forces the charge in these cases.
+              # TODO this won't be correct if there were a lot of other subscription changes
+              customer[:upcoming] = [line_item]
             end
           end
         end
