@@ -103,7 +103,12 @@ module StripeMock
           subscription[:canceled_at] = nil
         end
 
-        subscription.merge!(custom_subscription_params(plan, customer, params))
+        # TODO need to verify if the timing difference experienced here happens with stripe
+        #   to make a long story short, between the initial request and the subsequent one to a paid package
+        #   results in StripeMock updating the current_period_start due to #custom_subscription_params
+        #   i believe stripe maintains the same period between requests
+        new_params = custom_subscription_params(plan, customer, params)
+        subscription.merge!(new_params)
 
 
         old_subscription = customer[:subscriptions][:data].find { |sub| sub[:id] == subscription[:id] }.clone
@@ -115,8 +120,6 @@ module StripeMock
         # old_subscription = customer[:subscriptions][:data].reject! { |sub| sub[:id] == subscription[:id] }
         customer[:subscriptions][:data] << subscription
 
-        $counter += 1
-
         if subscription && old_subscription && old_subscription[:current_period_start] == subscription[:current_period_start]
           if params[:prorate]
 
@@ -124,14 +127,9 @@ module StripeMock
             if old_plan[:amount] == 0
 
               line = Data.mock_subscription_line_item_from_plan(new_plan)
-              # time = Time.now.to_i
-
-              # if new_plan[:interval] == 'year'
-              #
-              #   line[:period] = {:start => subscription[:current_period_start], :end => time + 1.year}
-              # else
-              #   line[:period] = {:start => }
-              # end
+# 1457481822
+              line[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
+              binding.pry
               customer[:upcoming] << line
             elsif old_plan[:interval] == new_plan[:interval]
               # Moving to a new plan
@@ -141,21 +139,21 @@ module StripeMock
 
                 old_line_item = Data.mock_subscription_line_item_from_plan(old_plan)
 
-                if customer[:upcoming].include?(old_line_item)
-                  customer[:upcoming].delete(old_line_item)
+                old_line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
+
+                if old = customer[:upcoming].find{|u| u[:amount] == old_line_item[:amount] && u[:period][:start] == old_line_item[:period][:start]}
+                  customer[:upcoming].delete(old)
                 end
 
                 old_line_item[:amount] = -old_line_item[:amount]
 
-                old_line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
-
                 line_two = line_item.clone
-                line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
+                line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
 
-
-                line_two[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription), :count => $counter}
+                line_two[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription)}
 
                 customer[:upcoming] += [line_item, old_line_item, line_two]
+
               elsif new_plan[:amount] < old_plan[:amount]
                 # TODO should probably handle annual vs monthly, if the new plan is less than half the old plan, then it won't be a full
                 #   credit the next period
@@ -168,18 +166,16 @@ module StripeMock
 
 
                 # Problem here
-                line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
+                line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
                 line_item[:description] = "Remaining time on #{plan[:name]} after 08 Mar 2016"
 
                 future_line_item = line_item.clone
-                # future_line_item[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription), :count => ($counter += 1)}
-                future_line_item[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription), :count => $counter}
+
+                future_line_item[:period] = {start: subscription[:current_period_end], end: future_end_time_for(new_plan, subscription)}
 
 
-                prorate_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end], :count => $counter}
-
-
-
+                prorate_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
+                binding.pry
                 # See if there was a previously prorated charge and remove it, since the date will no longer be correct
                 if existing = customer[:upcoming].find{|u| u[:amount] == prorate_item[:amount] && u[:period][:start] > prorate_item[:period][:start]}
                   #TODO also check that plans match AND dates are correct
