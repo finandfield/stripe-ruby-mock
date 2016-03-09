@@ -107,17 +107,18 @@ module StripeMock
         #   to make a long story short, between the initial request and the subsequent one to a paid package
         #   results in StripeMock updating the current_period_start due to #custom_subscription_params
         #   i believe stripe maintains the same period between requests
-        new_params = custom_subscription_params(plan, customer, params)
-        subscription.merge!(new_params)
+        if params[:current_period_start].nil? && !subscription[:current_period_start].nil?
+          params[:current_period_start] = subscription[:current_period_start]
+
+        end
+
+        subscription.merge!(custom_subscription_params(plan, customer, params))
 
 
         old_subscription = customer[:subscriptions][:data].find { |sub| sub[:id] == subscription[:id] }.clone
 
-        # old_plan = old_subscription[:plan].clone
-        # new_plan = subscription[:plan].clone
-
         customer[:subscriptions][:data].delete(old_subscription)
-        # old_subscription = customer[:subscriptions][:data].reject! { |sub| sub[:id] == subscription[:id] }
+
         customer[:subscriptions][:data] << subscription
 
         if subscription && old_subscription && old_subscription[:current_period_start] == subscription[:current_period_start]
@@ -129,7 +130,7 @@ module StripeMock
               line = Data.mock_subscription_line_item_from_plan(new_plan)
 # 1457481822
               line[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
-              binding.pry
+
               customer[:upcoming] << line
             elsif old_plan[:interval] == new_plan[:interval]
               # Moving to a new plan
@@ -140,7 +141,6 @@ module StripeMock
                 old_line_item = Data.mock_subscription_line_item_from_plan(old_plan)
 
                 old_line_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
-
                 if old = customer[:upcoming].find{|u| u[:amount] == old_line_item[:amount] && u[:period][:start] == old_line_item[:period][:start]}
                   customer[:upcoming].delete(old)
                 end
@@ -175,9 +175,10 @@ module StripeMock
 
 
                 prorate_item[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
-                binding.pry
+
+
                 # See if there was a previously prorated charge and remove it, since the date will no longer be correct
-                if existing = customer[:upcoming].find{|u| u[:amount] == prorate_item[:amount] && u[:period][:start] > prorate_item[:period][:start]}
+                if existing = customer[:upcoming].find{|u| u[:amount] == prorate_item[:amount] && u[:period][:start] >= prorate_item[:period][:start]}
                   #TODO also check that plans match AND dates are correct
                   customer[:upcoming].delete(existing)
                 end
