@@ -42,13 +42,8 @@ module StripeMock
           subscription[:discount] = Stripe::Util.convert_to_stripe_object({ coupon: coupon }, {})
         end
 
-
-
         add_subscription_to_customer(customer, subscription)
 
-        line = Data.mock_subscription_line_item_from_plan(plan)
-        line[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
-        customer[:upcoming] << line
         subscription
       end
 
