@@ -42,9 +42,13 @@ module StripeMock
           subscription[:discount] = Stripe::Util.convert_to_stripe_object({ coupon: coupon }, {})
         end
 
+
+
         add_subscription_to_customer(customer, subscription)
 
-
+        line = Data.mock_subscription_line_item_from_plan(plan)
+        line[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
+        customer[:upcoming] << line
         subscription
       end
 
@@ -120,7 +124,6 @@ module StripeMock
         customer[:subscriptions][:data].delete(old_subscription)
 
         customer[:subscriptions][:data] << subscription
-
         if subscription && old_subscription && old_subscription[:current_period_start] == subscription[:current_period_start]
           if params[:prorate]
 
@@ -128,7 +131,6 @@ module StripeMock
             if old_plan[:amount] == 0
 
               line = Data.mock_subscription_line_item_from_plan(new_plan)
-# 1457481822
               line[:period] = {start: subscription[:current_period_start], end: subscription[:current_period_end]}
 
               customer[:upcoming] << line

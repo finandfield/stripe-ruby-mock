@@ -80,8 +80,8 @@ module StripeMock
 
         id = new_id('in')
 
-        # lines = [invoice_item] + customer[:upcoming]
         lines = customer[:upcoming]
+
         invoices[id] = Data.mock_invoice(lines,
           id: id,
           customer: customer[:id],
