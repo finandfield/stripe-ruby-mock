@@ -274,6 +274,20 @@ module StripeMock
       }, params)
     end
 
+    def self.mock_bank_token_object(params={})
+      token = StripeMock.generate_bank_token(params)
+      {
+        id: token,
+        object: 'token',
+        client_up: "0.0.0.0",
+        created: Time.now.to_i,
+        livemode: false,
+        type: 'bank_account',
+        used: false
+      }.merge(params)
+
+    end
+
     def self.mock_bank_account(params={})
       {
         object: "bank_account",

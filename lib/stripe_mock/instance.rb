@@ -119,6 +119,7 @@ module StripeMock
     end
 
     def generate_webhook_event(event_data)
+
       event_data[:id] ||= new_id 'evt'
       @events[ event_data[:id] ] = symbolize_names(event_data)
     end
