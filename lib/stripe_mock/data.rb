@@ -11,12 +11,71 @@ module StripeMock
         timezone: "US/Pacific",
         details_submitted: false,
         charges_enabled: false,
-        transfers_enabled: false,
+        transfers_enabled: true,
+        object: 'account',
+        external_accounts: mock_external_accounts(id),
         currencies_supported: [
           "usd"
         ],
-
+        keys: {
+          secret: nil,
+          publishable: nil
+        },
+        legal_entity: {
+          verification: {
+            details: nil,
+            details_code: nil,
+            document: nil,
+            status: 'unverified'
+          }
+        },
+        balance: mock_balance,
+        tos_acceptance: {
+          date: nil,
+          ip: nil,
+          user_agent: nil
+        },
+        verification: {
+          disabled_reason: "fields_needed",
+          due_by: nil,
+          fields_needed: [
+            "legal_entity.dob.day",
+            "legal_entity.dob.month",
+            "legal_entity.dob.year",
+            "legal_entity.first_name",
+            "legal_entity.last_name",
+            "legal_entity.type",
+            "tos_acceptance.date",
+            "tos_acceptance.ip",
+            "bank_account"
+          ]
+        }
       }.merge(params)
+    end
+
+    def self.mock_balance(params={})
+      {
+        :object=>"balance",
+        :available=>[
+          {
+            currency: "usd",
+            amount: 0,
+            source_types: {
+              card: 0
+            }
+          }
+        ],
+        :livemode=>true,
+        :pending=>[
+          {
+            currency: "usd",
+            amount: 0,
+            source_types: {
+              card: 0
+            }
+          }
+        ]
+      }
     end
 
     def self.mock_customer(sources, params)
@@ -33,6 +92,7 @@ module StripeMock
         discount: nil,
         account_balance: 0,
         currency: nil,
+        upcoming: [],
         sources: {
           object: "list",
           total_count: sources.size,
@@ -111,6 +171,62 @@ module StripeMock
       }.merge(params)
     end
 
+    #TODO need to find a way to account for stripe fees
+    def self.mock_balance_transaction_from_charge(charge={})
+      params = {
+        id: charge[:balance_transaction],
+        fee: charge[:application_fee],
+        fee_details: [
+          {
+            amount: 0,
+            application: charge[:application_fee],
+            type: 'stripe_fee'
+          }
+        ],
+        net: charge[:amount],
+        source: charge[:id],
+        type: charge[:object]
+      }.merge(charge.slice(:amount, :currency, :description))
+
+      mock_balance_transaction(params)
+    end
+
+    def self.mock_balance_transaction(params={})
+      {
+        id: "txn_2dyYXXP90MN26R",
+        object: 'balance_transaction',
+        amount: 10000,
+        available_on: 1456439421,
+        created: 1456439421,
+        currency: "usd",
+        description: "Pre charge",
+        fee: 1500,
+        fee_details: [
+          {
+            amount: 1500,
+            application: nil,
+            currency: "usd",
+            description: "Stripe processing fees",
+            type: "stripe_fee"
+          }
+        ],
+        net: 9000,
+        source: "ch_17iXcnKRiEG7LLwGh0YSXj57",
+        sourced_transfers: {
+          object: "list",
+          data: [
+
+          ],
+          has_more: false,
+          total_count: 0,
+          url: "/v1/transfers?source_transaction=ch_17iXcnKRiEG7LLwGh0YSXj57"
+        },
+        status: "available",
+        type: "charge"
+      }.merge(params)
+
+    end
+
     def self.mock_refund(params={})
       {
         id: "re_4fWhgUh5si7InF",
@@ -158,6 +274,20 @@ module StripeMock
       }, params)
     end
 
+    def self.mock_bank_token_object(params={})
+      token = StripeMock.generate_bank_token(params)
+      {
+        id: token,
+        object: 'token',
+        client_up: "0.0.0.0",
+        created: Time.now.to_i,
+        livemode: false,
+        type: 'bank_account',
+        used: false
+      }.merge(params)
+
+    end
+
     def self.mock_bank_account(params={})
       {
         object: "bank_account",
@@ -169,6 +299,28 @@ module StripeMock
         fingerprint: "aBcFinGerPrINt123"
       }.merge(params)
     end
+
+    def self.mock_external_accounts(account, external_accounts=[])
+      data = []
+
+      external_accounts.each do |params|
+        params = mock_external_account(account, params)
+        data << mock_bank_account(params)
+      end
+      {
+        object: 'list',
+        url: "/v1/accounts/#{account}/external_accounts",
+        data: data
+      }
+    end
+
+    def self.mock_external_account(account, params)
+      params = mock_bank_account({
+        routing_number: "1223456789",
+        account: account
+      }).merge(params)
+    end
+
 
     def self.mock_coupon(params={})
       {
@@ -255,6 +407,13 @@ module StripeMock
         discount: nil,
         subscription: nil
       }.merge(params)
+    end
+
+    def self.mock_subscription_line_item_from_plan(params = {})
+      mock = mock_line_item(params)
+      mock[:plan] = params
+      mock[:type] = 'subscription'
+      mock
     end
 
     def self.mock_line_item(params = {})
@@ -444,6 +603,138 @@ module StripeMock
         }
       }.merge(params)
     end
+
+    def self.mock_account_transfer(params={})
+      id = params[:id]
+      {
+        id: id,
+        object: "transfer",
+        amount: 170497,
+        amount_reversed: 0,
+        application_fee: nil,
+        balance_transaction: nil,
+        created: 1456223350,
+        currency: "usd",
+        date: 1456223350,
+        description: "Payout to Stripe Account",
+        destination: 'test_acct_1',
+        failure_code: nil,
+        failure_message: nil,
+        livemode: false,
+        metadata: {},
+        recipient: nil,
+        reversals: {
+          object: "list",
+          data: [],
+          has_more: false,
+          total_count: 0,
+          url: "/v1/transfers/#{id}/reversals"
+        },
+        reversed: false,
+        source_transaction: nil,
+        source_type: "card",
+        statement_descriptor: "Monthly Booking Revenue",
+        status: "paid",
+        type: "stripe_account"
+      }.merge(params)
+    end
+
+    def self.mock_bank_transfer(account, params={})
+      {
+        id: "tr_17hdPm4CGk8CbGVeEaQtnUkz",
+        object: "transfer",
+        amount: 170497,
+        amount_reversed: 0,
+        application_fee: nil,
+        balance_transaction: nil,
+        bank_account: {
+          id: "ba_10478q4CGk8CbGVeyD7KQS4Y",
+          object: "bank_account",
+          account_holder_name: nil,
+          account_holder_type: nil,
+          bank_name: "TEST BANKS",
+          country: "US",
+          currency: "usd",
+          fingerprint: nil,
+          last4: "0000",
+          routing_number: "000000000",
+          status: "new"
+        },
+        created: 1456223350,
+        currency: "usd",
+        date: 1456223350,
+        description: "Payout to Bank Account",
+        destination: "ba_10478q4CGk8CbGVeyD7KQS4Y",
+        failure_code: nil,
+        failure_message: nil,
+        livemode: false,
+        metadata: {},
+        recipient: nil,
+        reversals: {
+          object: "list",
+          data: [],
+          has_more: false,
+          total_count: 0,
+          url: "/v1/transfers/#{account}/reversals"
+        },
+        reversed: false,
+        source_transaction: nil,
+        source_type: "card",
+        statement_descriptor: "Monthly Booking Revenue",
+        status: "paid",
+        type: "bank_account"
+      }.merge(params)
+    end
+
+   #  {
+   #   "id": "tr_17hdPm4CGk8CbGVeEaQtnUkz",
+   #   "object": "transfer",
+   #   "amount": 170497,
+   #   "amount_reversed": 0,
+   #   "application_fee": null,
+   #   "balance_transaction": "txn_17g2Ro4CGk8CbGVeyNuEgy2T",
+   #   "bank_account": {
+   #     "id": "ba_10478q4CGk8CbGVeyD7KQS4Y",
+   #     "object": "bank_account",
+   #     "account_holder_name": null,
+   #     "account_holder_type": null,
+   #     "bank_name": "PARKSIDE FINANCIAL BANK AND TRUST",
+   #     "country": "US",
+   #     "currency": "usd",
+   #     "fingerprint": null,
+   #     "last4": "6865",
+   #     "routing_number": "081019405",
+   #     "status": "new"
+   #   },
+   #   "created": 1456223350,
+   #   "currency": "usd",
+   #   "date": 1456223350,
+   #   "description": "Payout to Bank Account",
+   #   "destination": "ba_10478q4CGk8CbGVeyD7KQS4Y",
+   #   "failure_code": null,
+   #   "failure_message": null,
+   #   "livemode": false,
+   #   "metadata": {
+   #     "billing_account_id": "856705715",
+   #     "organization_id": "980190962"
+   #   },
+   #   "recipient": null,
+   #   "reversals": {
+   #     "object": "list",
+   #     "data": [
+   #
+   #     ],
+   #     "has_more": false,
+   #     "total_count": 0,
+   #     "url": "/v1/transfers/tr_17hdPm4CGk8CbGVeEaQtnUkz/reversals"
+   #   },
+   #   "reversed": false,
+   #   "source_transaction": null,
+   #   "source_type": "card",
+   #   "statement_descriptor": "Monthly Booking Revenue",
+   #   "status": "paid",
+   #   "type": "bank_account"
+   # }
 
     def self.mock_transfer(params={})
       id = params[:id] || 'tr_test_transfer'

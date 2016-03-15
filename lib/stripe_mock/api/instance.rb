@@ -9,6 +9,7 @@ module StripeMock
     @instance = Instance.new
     alias_stripe_method :request, @instance.method(:mock_request)
     @state = 'local'
+    @instance
   end
 
   def self.stop

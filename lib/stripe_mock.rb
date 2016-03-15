@@ -39,6 +39,9 @@ require 'stripe_mock/request_handlers/helpers/charge_helpers.rb'
 require 'stripe_mock/request_handlers/helpers/coupon_helpers.rb'
 require 'stripe_mock/request_handlers/helpers/subscription_helpers.rb'
 require 'stripe_mock/request_handlers/helpers/token_helpers.rb'
+require 'stripe_mock/request_handlers/helpers/external_account_helper.rb'
+require 'stripe_mock/request_handlers/helpers/balance_helpers.rb'
+require 'stripe_mock/request_handlers/helpers/transfer_helper.rb'
 
 require 'stripe_mock/request_handlers/validators/param_validators.rb'
 
@@ -58,6 +61,9 @@ require 'stripe_mock/request_handlers/recipients.rb'
 require 'stripe_mock/request_handlers/transfers.rb'
 require 'stripe_mock/request_handlers/subscriptions.rb'
 require 'stripe_mock/request_handlers/tokens.rb'
+require 'stripe_mock/request_handlers/external_accounts.rb'
+require 'stripe_mock/request_handlers/balance.rb'
+require 'stripe_mock/request_handlers/balance_transactions.rb'
 require 'stripe_mock/instance'
 
 require 'stripe_mock/test_strategies/base.rb'
@@ -69,8 +75,16 @@ module StripeMock
   lib_dir = File.expand_path(File.dirname(__FILE__), '../..')
   @webhook_fixture_path = './spec/fixtures/stripe_webhooks/'
   @webhook_fixture_fallback_path = File.join(lib_dir, 'stripe_mock/webhook_fixtures')
+  CARDS = Hashie::Mash.new({
+    :success_visa => '4242424242424242',
+    :visa_debit => '4000056655665556',
+    :mastercard => '5555555555554444',
+    :amex => '378282246310005',
+    :instant_charge => '4000000000000077'
+  })
 
   class << self
     attr_accessor :webhook_fixture_path
+
   end
 end

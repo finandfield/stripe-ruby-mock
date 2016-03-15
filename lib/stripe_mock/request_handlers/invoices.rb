@@ -14,8 +14,16 @@ module StripeMock
 
       def new_invoice(route, method_url, params, headers)
         id = new_id('in')
-        invoice_item = Data.mock_line_item()
-        invoices[id] = Data.mock_invoice([invoice_item], params.merge(:id => id))
+        # invoice_item = Data.mock_line_item()
+        # invoice = invoices[id]
+
+        customer = customers[params[:customer]]
+
+        lines = customer[:invoice_items]
+
+        #TODO figure out what each one of these mean
+
+        invoices[id] = Data.mock_invoice(lines, params.merge(:id => id))
       end
 
       def update_invoice(route, method_url, params, headers)
@@ -52,6 +60,7 @@ module StripeMock
       def pay_invoice(route, method_url, params, headers)
         route =~ method_url
         assert_existence :invoice, $1, invoices[$1]
+        #TODO create charge and actually transfer funds
         invoices[$1].merge!(:paid => true, :attempted => true, :charge => 'ch_1fD6uiR9FAA2zc')
       end
 
@@ -65,10 +74,18 @@ module StripeMock
         raise Stripe::InvalidRequestError.new("No upcoming invoices for customer: #{customer[:id]}", nil, 404) if customer[:subscriptions][:data].length == 0
 
         most_recent = customer[:subscriptions][:data].min_by { |sub| sub[:current_period_end] }
+
+
         invoice_item = get_mock_subscription_line_item(most_recent)
 
         id = new_id('in')
-        invoices[id] = Data.mock_invoice([invoice_item],
+
+        # lines = [invoice_item] + customer[:upcoming]
+        lines = customer[:upcoming]
+        if lines.empty?
+          lines << invoice_item
+        end
+        invoices[id] = Data.mock_invoice(lines,
           id: id,
           customer: customer[:id],
           subscription: most_recent[:id],

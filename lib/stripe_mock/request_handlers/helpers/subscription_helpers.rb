@@ -2,6 +2,14 @@ module StripeMock
   module RequestHandlers
     module Helpers
 
+      def future_end_time_for(plan, subscription)
+        if plan[:interval] == 'year'
+          future_end_time = (Time.at(subscription[:current_period_end]) + 1.year).to_i
+        else
+          future_end_time = (Time.at(subscription[:current_period_end]) + 1.month).to_i
+        end
+      end
+
       def get_customer_subscription(customer, sub_id)
         customer[:subscriptions][:data].find{|sub| sub[:id] == sub_id }
       end
@@ -10,10 +18,11 @@ module StripeMock
         verify_trial_end(options[:trial_end]) if options[:trial_end]
 
         start_time = options[:current_period_start] || Time.now.utc.to_i
+
         params = { plan: plan, customer: cus[:id], current_period_start: start_time }
         params.merge! options.select {|k,v| k =~ /application_fee_percent|quantity|metadata|tax_percent/}
-        # TODO: Implement coupon logic
 
+        # TODO: Implement coupon logic
         if (plan[:trial_period_days].nil? && options[:trial_end].nil?) || options[:trial_end] == "now"
           end_time = get_ending_time(start_time, plan)
           params.merge!({status: 'active', current_period_end: end_time, trial_start: nil, trial_end: nil})

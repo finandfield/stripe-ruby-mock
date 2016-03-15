@@ -37,12 +37,12 @@ describe StripeMock do
     }
   end
 
-  describe "Live Testing" do
+  describe "live Testing" do
     after { StripeMock.instance_variable_set(:@state, 'ready') }
 
     it "sets the default test strategy" do
       StripeMock.toggle_live(true)
-      expect(StripeMock.create_test_helper).to be_a StripeMock::TestStrategies::Live
+      expect(StripeMock.create_test_helper).to be_a StripeMock::TestStrategies::live
 
       StripeMock.toggle_live(false)
       expect(StripeMock.create_test_helper).to be_a StripeMock::TestStrategies::Mock
@@ -84,7 +84,7 @@ describe StripeMock do
 
     it "can specify which strategy to use" do
       helper = StripeMock.create_test_helper(:live)
-      expect(helper).to be_a StripeMock::TestStrategies::Live
+      expect(helper).to be_a StripeMock::TestStrategies::live
 
       helper = StripeMock.create_test_helper(:mock)
       expect(helper).to be_a StripeMock::TestStrategies::Mock
@@ -97,7 +97,7 @@ describe StripeMock do
     it "can configure the default strategy" do
       StripeMock.set_default_test_helper_strategy(:live)
       helper = StripeMock.create_test_helper
-      expect(helper).to be_a StripeMock::TestStrategies::Live
+      expect(helper).to be_a StripeMock::TestStrategies::live
     end
 
     it "can overrige a set default strategy" do

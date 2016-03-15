@@ -19,6 +19,7 @@ module StripeMock
     json[:data][:object] = Util.rmerge(json[:data][:object], params)
     json.delete(:id)
 
+
     if @state == 'local'
       event_data = instance.generate_webhook_event(json)
     elsif @state == 'remote'

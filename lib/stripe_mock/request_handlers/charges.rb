@@ -3,18 +3,18 @@ module StripeMock
     module Charges
 
       def Charges.included(klass)
+        klass.add_handler 'get /v1/charges/(.*)/refunds/(.*)',          :get_refund
         klass.add_handler 'post /v1/charges',               :new_charge
         klass.add_handler 'get /v1/charges',                :get_charges
         klass.add_handler 'get /v1/charges/(.*)',           :get_charge
         klass.add_handler 'post /v1/charges/(.*)/capture',  :capture_charge
         klass.add_handler 'post /v1/charges/(.*)/refund',   :refund_charge
-        klass.add_handler 'post /v1/charges/(.*)/refunds',  :create_refund
+        klass.add_handler 'post /v1/refunds',               :create_refund
         klass.add_handler 'post /v1/charges/(.*)',          :update_charge
       end
 
       def new_charge(route, method_url, params, headers)
         id = new_id('ch')
-
         if params[:source] && params[:source].is_a?(String)
           # if a customer is provided, the card parameter is assumed to be the actual
           # card id, not a token. in this case we'll find the card in the customer
@@ -28,9 +28,66 @@ module StripeMock
           raise Stripe::InvalidRequestError.new("Invalid token id: #{params[:card]}", 'card', 400)
         end
 
-        ensure_required_params(params)
 
-        charges[id] = Data.mock_charge(params.merge :id => id, :balance_transaction => new_balance_transaction('txn'))
+        customer = customers[params[:customer]]
+
+        unless customer.present?
+          raise Stripe::InvalidRequestError.new("Could not find customer with id: #{params[:customer].inspect}", 'customer', 400)
+        end
+
+        # Find the customers card
+        if params[:source].nil? && customer && params[:destination] && params[:destination].include?('acct') && customer[:default_source]
+          # This is most often called when we do an "instant charge"
+          card = customer[:sources][:data].find{|card| card[:id] == customer[:default_source]}
+        elsif customer[:sources] && customer[:sources][:data].any?
+          card = customer[:sources][:data].find{|card| card[:id] == params[:card]}
+        end
+
+        # Raise an exception if the card doesn't belong to the customer
+        unless card
+          raise Stripe::InvalidRequestError.new("#{params[:card]} does not belong to #{params[:customer]}", 'amount', 400)
+        end
+
+        ensure_required_params(params)
+        charge = Data.mock_charge(params.merge :id => id, :balance_transaction => new_balance_transaction('txn'))
+
+        if customer && card && params[:destination] && params[:destination].include?('acct')
+          # In these cases, we are accounting for cards with the number `4000 0000 0000 0077`. When this card is used, funds are
+          #   deposited directly into the destination account
+          #TODO handle failure cards
+          if card[:last4] == CARDS.instant_charge.last(4)
+            # These charges go straight to the account's available balance
+            balance_type = :available
+          else
+            # These charges are stored in the pending balance
+            balance_type = :pending
+          end
+          account = accounts[params[:destination]]
+          account[:balance][balance_type].first[:amount] += charge[:amount]
+          account[:balance][balance_type].first[:source_types][:card] += charge[:amount]
+        else
+          # This deals with a normal charge, where it is placed in the "master" account(the account all Connected Accounts report to)
+
+          #TODO handle failure cards
+          if card && card[:last4] == CARDS.instant_charge.last(4)
+            # Instant charge goes straight to available balance
+            balance_type = :available
+          else
+            # Other charges go to pending
+            balance_type = :pending
+          end
+          $master_account[:balance][balance_type].first[:amount] += charge[:amount]
+          $master_account[:balance][balance_type].first[:source_types][:card] += charge[:amount]
+        end
+
+        if card
+          charge[:source] = card
+        end
+
+        balance_transaction = Data.mock_balance_transaction_from_charge(charge)
+        balance_transactions[balance_transaction[:id]] = balance_transaction
+
+        charges[id] = charge
       end
 
       def update_charge(route, method_url, params, headers)
@@ -62,7 +119,19 @@ module StripeMock
 
       def get_charge(route, method_url, params, headers)
         route =~ method_url
-        assert_existence :charge, $1, charges[$1]
+
+        if $1
+          assert_existence :charge, $1, charges[$1]
+        elsif params[:charge]
+          assert_existence :charge, params[:charge], charges[params[:charge]]
+        end
+      end
+
+      def get_refund(route, method_url, params, headers)
+        route =~ method_url
+        charge = charges[$1]
+        refund = charge[:refunds][:data].find{|r| r[:id] == $2}
+        refund
       end
 
       def capture_charge(route, method_url, params, headers)
@@ -99,9 +168,18 @@ module StripeMock
         refund = Data.mock_refund params.merge(
           :balance_transaction => new_balance_transaction('txn'),
           :id => new_id('re'),
-          :charge => charge[:id]
+          :charge => charge[:id],
+          :card => charge[:source],
+          :amount => charge[:amount]
         )
+
         add_refund_to_charge(refund, charge)
+
+        transaction_params = refund.clone
+        transaction_params[:amount] = -transaction_params[:amount]
+        balance_transaction = Data.mock_balance_transaction_from_charge(transaction_params)
+        balance_transactions[balance_transaction[:id]] = balance_transaction
+
         refund
       end
 

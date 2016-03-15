@@ -18,6 +18,8 @@ module StripeMock
       @@handlers.find {|h| method_url =~ h[:route] }
     end
 
+    include StripeMock::RequestHandlers::ExternalAccounts
+    include StripeMock::RequestHandlers::Balance
     include StripeMock::RequestHandlers::Accounts
     include StripeMock::RequestHandlers::Charges
     include StripeMock::RequestHandlers::Cards
@@ -34,11 +36,13 @@ module StripeMock
     include StripeMock::RequestHandlers::Recipients
     include StripeMock::RequestHandlers::Transfers
     include StripeMock::RequestHandlers::Tokens
+    include StripeMock::RequestHandlers::BalanceTransactions
+
 
 
     attr_reader :accounts, :bank_tokens, :charges, :coupons, :customers, :disputes, :events,
                 :invoices, :invoice_items, :orders, :plans, :recipients, :transfers,
-                :subscriptions
+                :subscriptions, :balance_transactions
 
     attr_accessor :error_queue, :debug
 
@@ -58,6 +62,8 @@ module StripeMock
       @recipients = {}
       @transfers = {}
       @subscriptions = {}
+      @balance_transactions = {}
+      @bank_balances = {}
 
       @debug = false
       @error_queue = ErrorQueue.new
@@ -66,11 +72,23 @@ module StripeMock
 
       # This is basically a cache for ParamValidators
       @base_strategy = TestStrategies::Base.new
+
+      $master_account = {
+        id: 'master_acct',
+        keys: {
+          secret: Stripe.api_key,
+          publishable: new_id('pk')
+        },
+        balance: Data.mock_balance
+      }
+    end
+
+    def set_api_key(key)
+      Stripe.api_key = key
     end
 
     def mock_request(method, url, api_key, params={}, headers={}, api_base_url=nil)
       return {} if method == :xtest
-
       api_key ||= Stripe.api_key
 
       # Ensure params hash has symbols as keys
@@ -101,6 +119,7 @@ module StripeMock
     end
 
     def generate_webhook_event(event_data)
+
       event_data[:id] ||= new_id 'evt'
       @events[ event_data[:id] ] = symbolize_names(event_data)
     end

@@ -66,7 +66,7 @@ http_interactions:
         null,\n  \"invoice\": null,\n  \"description\": null,\n  \"dispute\": null,\n
         \ \"metadata\": {},\n  \"statement_description\": null,\n  \"receipt_email\":
         null\n}\n"
-    http_version: 
+    http_version:
   recorded_at: Wed, 27 Aug 2014 19:21:22 GMT
 - request:
     method: post
@@ -121,6 +121,6 @@ http_interactions:
       string: ! "{\n  \"id\": \"re_4fX3sdHZN1mfba\",\n  \"amount\": 555,\n  \"currency\":
         \"usd\",\n  \"created\": 1409167284,\n  \"object\": \"refund\",\n  \"balance_transaction\":
         \"txn_4fX3vOQMq1HTQt\",\n  \"metadata\": {},\n  \"charge\": \"ch_4fX3f4kErVLRcj\"\n}\n"
-    http_version: 
+    http_version:
   recorded_at: Wed, 27 Aug 2014 19:21:23 GMT
 recorded_with: VCR 2.6.0

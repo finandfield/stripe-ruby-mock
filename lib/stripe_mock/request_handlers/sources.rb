@@ -12,6 +12,7 @@ module StripeMock
 
       def create_source(route, method_url, params, headers)
         route =~ method_url
+
         add_card_to(:customer, $1, params, customers)
       end
 

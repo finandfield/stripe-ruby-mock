@@ -12,7 +12,14 @@ module StripeMock
 
       def new_invoice_item(route, method_url, params, headers)
         params[:id] ||= new_id('ii')
-        invoice_items[params[:id]] = Data.mock_invoice_item(params)
+
+        customer = customers[params[:customer]]
+
+        item = Data.mock_invoice_item(params)
+        customer[:invoice_items] ||= []
+        customer[:invoice_items] << item
+
+        invoice_items[params[:id]] = item
       end
 
       def update_invoice_item(route, method_url, params, headers)

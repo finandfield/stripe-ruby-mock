@@ -104,7 +104,7 @@ stripe_helper.generate_card_token(my_card_params)
 
 For everything else, use Stripe as you normally would (i.e. use Stripe as if you were not using StripeMock).
 
-## Live Testing
+## live Testing
 
 Every once in a while you want to make sure your tests are actually valid. StripeMock has a switch that allows you to run your test suite (or a subset thereof) against Stripe's live test servers.
 

@@ -14,9 +14,17 @@ module StripeMock
           assert_existence :recipient, recipient, recipients[recipient]
         end
 
+        if destination = params[:destination]
+          if is_account?(destination)
+            account = assert_existence :accounts, destination, accounts[destination]
+          end
+        end
+
         _transfers = transfers.each_with_object([]) do |(_, transfer), array|
           if recipient
             array << transfer if transfer[:recipient] == recipient
+          elsif destination
+            array << transfer if transfer[:destination] == destination
           else
             array << transfer
           end
@@ -29,17 +37,69 @@ module StripeMock
         Data.mock_list_object(_transfers, params)
       end
 
+      # TODO need to create a balance transaction and account for stripe/application fees
       def new_transfer(route, method_url, params, headers)
         id = new_id('tr')
-        if params[:bank_account]
-          params[:account] = get_bank_by_token(params.delete(:bank_account))
+
+        object = find_object_from_transfer_params(params)
+
+        if is_bank?(params[:destination])
+          @bank = find_bank_in_account(object, params[:destination])
+        elsif is_bank?(params[:bank_account])
+          @bank = find_bank_in_account(object, params[:destination])
+        elsif is_account?(params[:destination])
+          @account = object
         end
+
+
+        #TODO handle application fees/stripe processing fees
+        params[:amount] = params[:amount] - params[:application_fee] if params[:application_fee]
 
         unless params[:amount].is_a?(Integer) || (params[:amount].is_a?(String) && /^\d+$/.match(params[:amount]))
           raise Stripe::InvalidRequestError.new("Invalid integer: #{params[:amount]}", 'amount', 400)
         end
 
-        transfers[id] = Data.mock_transfer(params.merge :id => id)
+        params.merge!(:id => id)
+
+
+        if is_bank?(params[:destination])
+          transfer = Data.mock_bank_transfer(object[:id], params)
+
+          transfer.merge!({bank_account: @bank}) if @bank
+
+          object[:balance][:available].first[:amount] -= transfer[:amount]
+          object[:balance][:available].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
+          @bank_balances[object[:id]] ||= 0
+          @bank_balances[object[:id]] += transfer[:amount]
+
+          transfers[id] = transfer
+        elsif is_account?(params[:destination])
+          transfer = Data.mock_account_transfer(params)
+
+          if charge = charges[transfer[:source_transaction]]
+            last4 = charge[:source][:last4]
+            if last4 == CARDS.instant_charge.last(4)
+              balance_type = :available
+            else
+              balance_type = :pending
+            end
+
+            # TODO handle negative master account balances(throw same exception as stripe)
+            $master_account[:balance][balance_type].first[:amount] -= transfer[:amount]
+            $master_account[:balance][balance_type].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
+
+            #TODO need to handle pending/available
+            #TODO use correct currencies for balance addition using transfer[:currency]
+            object[:balance][balance_type].first[:amount] += transfer[:amount]
+            object[:balance][balance_type].first[:source_types][transfer[:source_type].to_sym] += transfer[:amount]
+          else
+            raise ArgumentError, 'could not find a charge associated with the transfer'
+          end
+
+          #TODO also transfer to account pending/available balances
+          transfers[id] = transfer
+        end
+        transfer
       end
 
       def get_transfer(route, method_url, params, headers)
