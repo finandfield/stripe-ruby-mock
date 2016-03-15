@@ -76,14 +76,25 @@ module StripeMock
         elsif is_account?(params[:destination])
           transfer = Data.mock_account_transfer(params)
 
-          # TODO handle negative master account balances(throw same exception as stripe)
-          $master_account[:balance][:available].first[:amount] -= transfer[:amount]
-          $master_account[:balance][:available].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
+          if charge = charges[transfer[:source_transaction]]
+            last4 = charge[:source][:last4]
+            if last4 == CARDS.instant_charge.last(4)
+              balance_type = :available
+            else
+              balance_type = :pending
+            end
 
-          #TODO need to handle pending/available
-          #TODO use correct currencies for balance addition using transfer[:currency]
-          object[:balance][:available].first[:amount] += transfer[:amount]
-          object[:balance][:available].first[:source_types][transfer[:source_type].to_sym] += transfer[:amount]
+            # TODO handle negative master account balances(throw same exception as stripe)
+            $master_account[:balance][balance_type].first[:amount] -= transfer[:amount]
+            $master_account[:balance][balance_type].first[:source_types][transfer[:source_type].to_sym] -= transfer[:amount]
+
+            #TODO need to handle pending/available
+            #TODO use correct currencies for balance addition using transfer[:currency]
+            object[:balance][balance_type].first[:amount] += transfer[:amount]
+            object[:balance][balance_type].first[:source_types][transfer[:source_type].to_sym] += transfer[:amount]
+          else
+            raise ArgumentError, 'could not find a charge associated with the transfer'
+          end
 
           #TODO also transfer to account pending/available balances
           transfers[id] = transfer
